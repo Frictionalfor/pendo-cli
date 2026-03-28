@@ -1,0 +1,19 @@
+{
+  "patterns": [
+    "sql syntax",
+    "mysql_fetch",
+    "ORA-\\d{5}",
+    "syntax error",
+    "unclosed quotation",
+    "pg_query\\(\\)",
+    "sqlite3",
+    "you have an error in your sql",
+    "warning: mysql",
+    "division by zero",
+    "supplied argument is not a valid mysql",
+    "microsoft ole db provider for sql server",
+    "odbc microsoft access driver",
+    "jdbc exception",
+    "sqlexception"
+  ]
+}

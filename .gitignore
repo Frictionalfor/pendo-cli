@@ -1,0 +1,17 @@
+# Python bytecode — never commit these
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Scan output
+output/scans/*
+!output/scans/.gitkeep
+
+# Env / secrets
+.env
+*.env
+
+# OS noise
+.DS_Store
+Thumbs.db

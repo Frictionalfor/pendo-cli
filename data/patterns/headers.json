@@ -1,0 +1,8 @@
+{
+  "Content-Security-Policy":   { "risk": "Medium" },
+  "X-Frame-Options":           { "risk": "Medium" },
+  "Strict-Transport-Security": { "risk": "High"   },
+  "X-Content-Type-Options":    { "risk": "Low"    },
+  "Referrer-Policy":           { "risk": "Low"    },
+  "Permissions-Policy":        { "risk": "Low"    }
+}

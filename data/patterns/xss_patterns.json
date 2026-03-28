@@ -1,0 +1,11 @@
+{
+  "patterns": [
+    "<script[^>]*>",
+    "onerror\\s*=",
+    "onload\\s*=",
+    "javascript:",
+    "eval\\(",
+    "document\\.cookie",
+    "document\\.write"
+  ]
+}

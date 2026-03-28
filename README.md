@@ -8,12 +8,20 @@ Performs payload-driven vulnerability detection with intelligent response analys
 ## Features
 
 - Security header analysis (CSP, HSTS, X-Frame-Options, and more)
-- CORS misconfiguration detection
-- SQL injection error pattern detection
-- Reflected input / XSS indicator detection
+- CORS misconfiguration detection (wildcard + reflected origin with credentials)
+- SSL/TLS analysis (certificate expiry, self-signed, TLS 1.0/1.1)
+- Cookie security flag analysis (HttpOnly, Secure, SameSite)
+- Open redirect detection via parameter injection
+- Directory and file bruteforce (threaded, 80+ path wordlist)
+- Login endpoint rate limit testing
+- SQL injection — error-based pattern detection
+- SQL injection — time-based and boolean-based blind detection
+- Reflected XSS detection with baseline comparison (no false positives)
 - Behavioral analysis (status codes, server disclosure, large responses)
 - Endpoint discovery with SPA support (common route probing + JS path extraction)
-- Payload injection engine with rate limiting
+- Threaded probe and bruteforce engine
+- Confidence scoring on every finding (High / Medium / Low)
+- Deduplication — duplicate findings merged, confidence upgraded on repeat hits
 - LRU response cache with full post-operation purge
 - JSON and plain text report output
 - Report management from the CLI (list, open, delete)
@@ -96,11 +104,16 @@ commands:
 
 ### scan
 
-Runs a full passive security scan against a target URL.
+Runs a full passive and active security scan against a target URL.
 
 Checks performed:
 - All HTTP security headers
 - CORS policy
+- SSL/TLS certificate and protocol analysis
+- Cookie security flags (HttpOnly, Secure, SameSite)
+- Open redirect parameter injection
+- Directory and file bruteforce
+- Login endpoint rate limit testing
 - Endpoint discovery
 - Behavioral anomalies per discovered endpoint
 
@@ -151,6 +164,7 @@ pendo reports delete all
 
 | Option | Description |
 |---|---|
+| `--threads N` | Thread count for bruteforce and probe (default: 10) |
 | `--explain` | Show human-readable reasoning for each finding |
 | `-o, --output FILE` | Save report to a specific file |
 | `--format txt\|json` | Report format (default: txt) |
@@ -188,9 +202,16 @@ pendo-cli/
 ├── modules/
 │   ├── header_check.py       Security header analysis
 │   ├── cors_check.py         CORS misconfiguration detection
+│   ├── ssl_check.py          SSL/TLS certificate and protocol analysis
+│   ├── cookie_check.py       Cookie security flag analysis
+│   ├── open_redirect.py      Open redirect parameter injection
+│   ├── dir_bruteforce.py     Threaded directory and file discovery
+│   ├── rate_limit_check.py   Login endpoint rate limit testing
 │   ├── sqli_probe.py         SQL injection pattern detection
-│   ├── xss_probe.py          Reflected input detection
+│   ├── xss_probe.py          Reflected input detection with baseline comparison
+│   ├── blind_sqli.py         Time-based and boolean-based blind SQLi
 │   ├── behavior_analyzer.py  Behavioral anomaly detection
+│   ├── deduplicator.py       Finding deduplication and confidence scoring
 │   ├── payload_manager.py    Payload file loader
 │   ├── rate_limiter.py       Request rate control
 │   └── explain.py            Human-readable finding explanations
@@ -206,6 +227,8 @@ pendo-cli/
 │   │   ├── sqli.txt
 │   │   ├── xss.txt
 │   │   └── generic.txt
+│   ├── wordlists/
+│   │   └── dirs.txt          80+ paths for directory bruteforce
 │   └── patterns/
 │       ├── sqli_patterns.json
 │       ├── xss_patterns.json
