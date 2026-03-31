@@ -53,6 +53,9 @@ def check_rate_limiting(base_url, requester, explain=False):
         has_lockout = any(c in (423, 403) for c in codes)
 
         if not has_429 and not has_lockout:
+            # Only flag if the endpoint actually exists (not all 404s)
+            if all(c == 404 for c in codes):
+                continue
             issue = {
                 "type": "No Rate Limiting on Login Endpoint",
                 "endpoint": url,

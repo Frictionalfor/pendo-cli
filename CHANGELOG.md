@@ -1,5 +1,45 @@
 # Changelog
 
+## [1.1.0] - 2026-03-31
+
+### New Command
+- `pendo fuzz` - Mutation-based parameter fuzzing with 60+ generated mutations per parameter
+
+### Scan Modules (new)
+- CSRF detection — missing token on POST forms + cross-origin POST acceptance test
+- HTTP method tampering — PUT, DELETE, PATCH, OPTIONS, TRACE testing (threaded)
+- JWT analysis — alg:none bypass, weak HS256 secret cracking, expiry, sensitive payload fields, missing claims
+
+### Probe Modules (new)
+- XXE injection — XML external entity payloads across XML content types
+- SSRF — internal URL injection into URL-like parameters (AWS metadata, localhost, Redis, MySQL)
+- Path traversal — ../ sequences into file/path parameters with system file indicators
+- Command injection — OS command separators (;id, |whoami, $(id)) appended to all parameters
+
+### Fuzz Modules (new)
+- Type juggling mutations (null, true, false, 0, -1, NaN, Infinity, [], {})
+- Boundary values (empty, whitespace, null byte, 256/4096 char strings)
+- Encoding variants (URL, double URL, HTML entity)
+- Format string probes (%s, %d, %x, %n)
+- SSTI probes (Jinja2, Twig, Freemarker, Spring, ERB)
+- Anomaly detection: status code changes, response size deltas, error disclosure
+
+### Output (new)
+- Severity summary box after every scan/probe/fuzz — bar chart by risk level
+- `utils/summary.py` — shared summary renderer for terminal and JSON
+
+### Bug Fixes
+- Dir bruteforce: SPA catch-all detection — Vite/React/Vue apps no longer flood results with false 200s
+- Rate limit check: endpoints returning all-404 no longer flagged as missing rate limiting
+- XSS probe: baseline comparison prevents false positives from static page content
+
+### Infrastructure
+- `core/fuzzer.py` — threaded mutation engine with baseline comparison
+- `utils/summary.py` — severity summary renderer
+- All new modules suppress urllib3 SSL warnings independently
+
+---
+
 ## [1.0.0] - 2026-03-28
 
 ### Core
@@ -21,7 +61,7 @@
 
 ### Probe Modules
 - Error-based SQL injection detection (MySQL, PostgreSQL, Oracle, SQLite, MSSQL patterns)
-- Reflected XSS detection with baseline comparison (eliminates false positives)
+- Reflected XSS detection with baseline comparison
 - XSS pattern detection
 - Time-based blind SQLi (MySQL SLEEP, MSSQL WAITFOR, PostgreSQL pg_sleep, Oracle, SQLite)
 - Boolean-based blind SQLi (response size differential analysis)

@@ -1,32 +1,49 @@
 # Pendo CLI
 
-A terminal-based web security probing and analysis tool for penetration testers and developers.
+A terminal-based web application security probing tool for penetration testers and developers.
 Performs payload-driven vulnerability detection with intelligent response analysis.
+
+Where recon tools map the attack surface, Pendo probes it.
 
 ---
 
 ## Features
 
-- Security header analysis (CSP, HSTS, X-Frame-Options, and more)
-- CORS misconfiguration detection (wildcard + reflected origin with credentials)
+### Scan
+- Security header analysis (CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy)
+- CORS misconfiguration (wildcard origin, reflected origin with credentials)
 - SSL/TLS analysis (certificate expiry, self-signed, TLS 1.0/1.1)
-- Cookie security flag analysis (HttpOnly, Secure, SameSite)
-- Open redirect detection via parameter injection
-- Directory and file bruteforce (threaded, 80+ path wordlist)
+- Cookie security flags (HttpOnly, Secure, SameSite)
+- Open redirect parameter injection
+- Directory and file bruteforce (threaded, SPA-aware, 80+ path wordlist)
 - Login endpoint rate limit testing
-- SQL injection — error-based pattern detection
-- SQL injection — time-based and boolean-based blind detection
-- Reflected XSS detection with baseline comparison (no false positives)
+- CSRF detection (missing tokens on POST forms, cross-origin POST acceptance)
+- HTTP method tampering (PUT, DELETE, PATCH, TRACE testing)
+- JWT analysis (alg:none bypass, weak secret cracking, expiry, sensitive payload)
 - Behavioral analysis (status codes, server disclosure, large responses)
-- Endpoint discovery with SPA support (common route probing + JS path extraction)
-- Threaded probe and bruteforce engine
-- Confidence scoring on every finding (High / Medium / Low)
-- Deduplication — duplicate findings merged, confidence upgraded on repeat hits
-- LRU response cache with full post-operation purge
-- JSON and plain text report output
-- Report management from the CLI (list, open, delete)
-- Explain mode with human-readable reasoning for every finding
-- Silent mode for clean output piping
+
+### Probe
+- Error-based SQL injection (MySQL, PostgreSQL, Oracle, SQLite, MSSQL)
+- Time-based and boolean-based blind SQLi
+- Reflected XSS with baseline comparison (no false positives)
+- XXE injection (XML external entity across content types)
+- SSRF (internal URL injection into URL-like parameters)
+- Path traversal (../etc/passwd into file/path parameters)
+- Command injection (;id, |whoami, $(id) appended to parameters)
+
+### Fuzz
+- 60+ mutations per parameter: type juggling, boundary values, encoding variants
+- SSTI probes (Jinja2, Twig, Freemarker, Spring, ERB)
+- Format string probes
+- Anomaly detection: status code changes, response size deltas, error disclosure
+
+### Output
+- Severity summary box after every operation (bar chart by risk level)
+- Confidence scoring per finding (High / Medium / Low)
+- Deduplication with confidence upgrade on repeat hits
+- JSON and plain text report formats
+- Explain mode with human-readable reasoning per finding
+- Silent mode for clean piping
 - Auth header and cookie injection for authenticated scans
 - No bytecode cache written at any point
 
@@ -36,8 +53,6 @@ Performs payload-driven vulnerability detection with intelligent response analys
 
 - Python 3.8 or higher
 - pip
-
-Dependencies:
 
 ```
 requests
@@ -57,8 +72,7 @@ cd pendo-cli
 bash setup.sh
 ```
 
-The setup script installs dependencies and creates a global `pendo` command at `~/.local/bin/pendo`.
-Make sure `~/.local/bin` is in your PATH. If it is not, add this to your `~/.bashrc` or `~/.zshrc`:
+Creates a global `pendo` command at `~/.local/bin/pendo`. Make sure it is in your PATH:
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
@@ -72,7 +86,7 @@ cd pendo-cli
 bash termux-setup.sh
 ```
 
-### Manual install (any platform)
+### Manual
 
 ```bash
 pip install -r requirements.txt
@@ -93,9 +107,10 @@ bash check.sh
 pendo [-h] [-v] <command> [options] <url>
 
 commands:
-  scan   <url>    Run full security scan (headers, CORS, behavior)
-  probe  <url>    Inject payloads and detect SQLi / XSS
-  reports         Manage saved scan reports
+  scan     Full security scan
+  probe    Deep payload injection
+  fuzz     Mutation-based parameter fuzzing
+  reports  Manage saved scan reports
 ```
 
 ---
@@ -104,49 +119,46 @@ commands:
 
 ### scan
 
-Runs a full passive and active security scan against a target URL.
-
-Checks performed:
-- All HTTP security headers
-- CORS policy
-- SSL/TLS certificate and protocol analysis
-- Cookie security flags (HttpOnly, Secure, SameSite)
-- Open redirect parameter injection
-- Directory and file bruteforce
-- Login endpoint rate limit testing
-- Endpoint discovery
-- Behavioral anomalies per discovered endpoint
-
 ```bash
 pendo scan https://example.com
 pendo scan https://example.com --explain
-pendo scan https://example.com -o report --format json
-pendo scan https://example.com --silent
+pendo scan https://example.com --threads 20 --format json
 pendo scan https://example.com --cookies 'session=abc;token=xyz'
 pendo scan https://example.com --auth 'Authorization:Bearer TOKEN'
-pendo scan https://example.com --no-cache --delay 1
+pendo scan https://example.com --silent -o report
 ```
+
+Runs all scan modules: headers, CORS, SSL, cookies, open redirect, dir bruteforce,
+rate limit, CSRF, method tampering, JWT (if --auth Bearer token provided), behavior.
 
 ### probe
 
-Crawls the target, then injects payloads into every discovered parameter.
-
 ```bash
 pendo probe https://example.com --payloads sqli
-pendo probe https://example.com --payloads xss
-pendo probe https://example.com --payloads generic
-pendo probe https://example.com --payloads data/payloads/sqli.txt --explain
-pendo probe https://example.com --payloads sqli --format json -o result
+pendo probe https://example.com --payloads xss --explain
+pendo probe https://example.com --payloads generic --threads 20
+pendo probe https://example.com --payloads data/payloads/sqli.txt
 ```
 
-Payload categories resolve automatically from `data/payloads/`:
+Runs: error-based SQLi, blind SQLi, XSS, XXE, SSRF, path traversal, command injection.
+
+Payload categories resolve from `data/payloads/`:
 - `sqli` -> `data/payloads/sqli.txt`
 - `xss` -> `data/payloads/xss.txt`
 - `generic` -> `data/payloads/generic.txt`
 
-### reports
+### fuzz
 
-Manage saved scan output files stored in `output/scans/`.
+```bash
+pendo fuzz https://example.com --seed admin
+pendo fuzz https://example.com --seed 1 --threads 15
+pendo fuzz https://example.com --seed test --format json -o fuzz_report
+```
+
+Generates 60+ mutations from the seed value and injects them into every discovered
+parameter. Detects status anomalies, response size deltas, error disclosure, and SSTI.
+
+### reports
 
 ```bash
 pendo reports list
@@ -156,26 +168,25 @@ pendo reports delete 2
 pendo reports delete all
 ```
 
-`open` and `delete` accept an index number, exact filename, or partial filename match.
-
 ---
 
 ## Options Reference
 
 | Option | Description |
 |---|---|
-| `--threads N` | Thread count for bruteforce and probe (default: 10) |
-| `--explain` | Show human-readable reasoning for each finding |
-| `-o, --output FILE` | Save report to a specific file |
+| `--explain` | Human-readable reasoning for each finding |
+| `-o, --output FILE` | Save report to file (default: output/scans/) |
 | `--format txt\|json` | Report format (default: txt) |
+| `--threads N` | Thread count (default: 10) |
 | `--delay SECONDS` | Delay between requests (default: 0.3) |
-| `--cookies COOKIES` | Session cookies, e.g. `session=abc;token=xyz` |
-| `--auth HEADER` | Auth header, e.g. `Authorization:Bearer TOKEN` |
-| `--silent` | Suppress progress output, print findings only |
-| `--no-cache` | Disable response caching entirely |
+| `--cookies COOKIES` | Session cookies e.g. `session=abc;token=xyz` |
+| `--auth HEADER` | Auth header e.g. `Authorization:Bearer TOKEN` |
+| `--silent` | Suppress progress, print findings and summary only |
+| `--no-cache` | Disable response caching |
 | `--cache-ttl SECS` | Cache TTL in seconds (default: 300) |
 | `--cache-size N` | Max cached responses (default: 256) |
-| `--payloads FILE` | Payload file or category name (probe only) |
+| `--payloads FILE` | Payload file or category (probe only) |
+| `--seed VALUE` | Seed for mutation generation (fuzz only, default: test) |
 
 ---
 
@@ -183,8 +194,8 @@ pendo reports delete all
 
 ```
 pendo-cli/
-├── pendo.py                  Entry point
-├── version.txt               Current version
+├── pendo.py                  Entry point (v1.1.0)
+├── version.txt
 ├── requirements.txt
 ├── CHANGELOG.md
 ├── setup.sh                  Linux installer
@@ -194,9 +205,10 @@ pendo-cli/
 │
 ├── core/
 │   ├── cache.py              LRU response cache with TTL and eviction
-│   ├── requester.py          HTTP session manager with full purge
+│   ├── requester.py          HTTP session manager with full post-op purge
 │   ├── crawler.py            Endpoint discovery (links, forms, JS paths, common routes)
-│   ├── probe_engine.py       Payload injection engine
+│   ├── probe_engine.py       Threaded payload injection engine
+│   ├── fuzzer.py             Mutation-based fuzzing engine (v1.1)
 │   └── response_store.py     In-memory response store per scan session
 │
 ├── modules/
@@ -205,11 +217,18 @@ pendo-cli/
 │   ├── ssl_check.py          SSL/TLS certificate and protocol analysis
 │   ├── cookie_check.py       Cookie security flag analysis
 │   ├── open_redirect.py      Open redirect parameter injection
-│   ├── dir_bruteforce.py     Threaded directory and file discovery
+│   ├── dir_bruteforce.py     Threaded directory discovery (SPA-aware)
 │   ├── rate_limit_check.py   Login endpoint rate limit testing
-│   ├── sqli_probe.py         SQL injection pattern detection
-│   ├── xss_probe.py          Reflected input detection with baseline comparison
+│   ├── csrf_check.py         CSRF token and origin validation (v1.1)
+│   ├── method_tamper.py      HTTP method tampering (v1.1)
+│   ├── jwt_check.py          JWT security analysis (v1.1)
+│   ├── sqli_probe.py         Error-based SQL injection
+│   ├── xss_probe.py          Reflected XSS with baseline comparison
 │   ├── blind_sqli.py         Time-based and boolean-based blind SQLi
+│   ├── xxe_probe.py          XML external entity injection (v1.1)
+│   ├── ssrf_probe.py         Server-side request forgery (v1.1)
+│   ├── path_traversal.py     Directory traversal (v1.1)
+│   ├── cmd_injection.py      OS command injection (v1.1)
 │   ├── behavior_analyzer.py  Behavioral anomaly detection
 │   ├── deduplicator.py       Finding deduplication and confidence scoring
 │   ├── payload_manager.py    Payload file loader
@@ -219,6 +238,7 @@ pendo-cli/
 ├── utils/
 │   ├── banner.py             Terminal banner and color constants
 │   ├── formatter.py          CLI output formatting
+│   ├── summary.py            Severity summary box (v1.1)
 │   ├── validator.py          URL validation
 │   └── logger.py             Logging system
 │
@@ -246,61 +266,81 @@ pendo-cli/
 
 ## Detection Logic
 
-### SQL Injection
+### SQL Injection (error-based)
+Matches error signatures: MySQL, PostgreSQL, Oracle, SQLite, MSSQL error strings.
 
-Matches error signatures in response bodies including:
-- MySQL, PostgreSQL, Oracle, SQLite, MSSQL error strings
-- Generic syntax error patterns
+### Blind SQLi
+Time-based: measures response delay after injecting SLEEP/WAITFOR/pg_sleep payloads.
+Boolean-based: compares response size between true/false conditions.
 
-### Reflected Input (XSS)
+### XSS
+Checks if the injected payload appears verbatim in the response body, compared against
+a baseline to eliminate false positives from static page content.
 
-- Checks if the injected payload appears verbatim in the response body
-- Pattern-based detection for unencoded dangerous characters
+### CSRF
+Checks POST forms for missing CSRF token fields. Tests cross-origin POST acceptance
+by sending a request with `Origin: https://evil.attacker.com`.
+
+### HTTP Method Tampering
+Sends PUT, DELETE, PATCH, OPTIONS, TRACE to each endpoint. Flags dangerous methods
+that return 200/201/204 or are advertised in the Allow header.
+
+### JWT
+Decodes the token from the --auth Bearer header. Tests alg:none bypass, attempts
+to crack HS256 with 20 common weak secrets, checks expiry and sensitive payload fields.
+
+### XXE
+Posts XML payloads with external entity references to endpoints. Checks response
+for /etc/passwd content, win.ini markers, and other file read indicators.
+
+### SSRF
+Injects internal URLs (127.0.0.1, localhost, 169.254.169.254) into URL-like parameters.
+Checks response for AWS metadata, SSH banners, Redis version strings.
+
+### Path Traversal
+Injects ../ sequences into file/path parameters. Checks response for /etc/passwd,
+/bin/bash, and Windows win.ini content.
+
+### Command Injection
+Appends command separators (;id, |whoami, $(id)) to parameter values. Checks response
+for uid=, gid=, and command output indicators.
+
+### Fuzz
+Generates 60+ mutations from a seed value. Detects: HTTP 500 responses, response size
+deltas over 2KB, error strings not present in the baseline, and SSTI indicators (49, 7777777).
 
 ### Security Headers
-
-Checks for the presence of:
-- `Content-Security-Policy`
-- `Strict-Transport-Security`
-- `X-Frame-Options`
-- `X-Content-Type-Options`
-- `Referrer-Policy`
-- `Permissions-Policy`
+Checks for: Content-Security-Policy, Strict-Transport-Security, X-Frame-Options,
+X-Content-Type-Options, Referrer-Policy, Permissions-Policy.
 
 ### CORS
-
-Sends a request with a spoofed `Origin: https://evil.attacker.com` header and checks if it is reflected in `Access-Control-Allow-Origin`. Flags wildcard origins and credential-bearing reflected origins.
+Spoofs Origin header and checks Access-Control-Allow-Origin response.
+Flags wildcard and reflected origins, especially with credentials enabled.
 
 ### Behavioral Analysis
-
-- HTTP 500 responses (potential stack trace / error disclosure)
-- HTTP 401 / 403 responses (access control indicators)
-- Server version disclosure via `Server` header
-- Unusually large responses (potential data leakage)
+HTTP 500 (error disclosure), 401/403 (access control), server version in headers,
+unusually large responses.
 
 ---
 
 ## Cache Behavior
 
-- GET requests during crawl are cached in an LRU store (default TTL 300s, max 256 entries)
-- Probe/payload requests always bypass cache and are never stored
-- After every scan or probe operation, a full purge runs:
+- GET requests during crawl are cached (LRU, default TTL 300s, max 256 entries)
+- Probe, fuzz, and payload requests always bypass cache
+- After every operation, full purge runs:
   - All LRU cache entries cleared
-  - All session cookies and auth headers wiped
-  - All urllib3 connection pools closed
+  - Session cookies and auth headers wiped
+  - urllib3 connection pools closed
   - ResponseStore cleared
-  - `gc.collect()` called to release memory
-- `PYTHONDONTWRITEBYTECODE=1` and `python3 -B` prevent `.pyc` files from being written
+  - gc.collect() called
+- PYTHONDONTWRITEBYTECODE=1 and python3 -B prevent .pyc files
 
 ---
 
 ## Report Comparison
 
-Compare two JSON reports to see what changed between scans:
-
 ```bash
 pendo scan https://example.com --format json -o scan_before
-# make changes or wait
 pendo scan https://example.com --format json -o scan_after
 python3 -m reports.diff scan_before.json scan_after.json
 ```
@@ -317,10 +357,8 @@ bash update.sh
 
 ## Ethical Use
 
-Pendo CLI is intended for:
-- Authorized penetration testing
-- Security research on systems you own or have explicit permission to test
-- Educational purposes
+Pendo CLI is intended for authorized penetration testing, security research on systems
+you own or have explicit permission to test, and educational purposes.
 
 Unauthorized use against systems without permission is illegal.
 The author assumes no liability for misuse.

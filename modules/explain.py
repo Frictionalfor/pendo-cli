@@ -108,6 +108,60 @@ _EXPLANATIONS = {
         "The application returned different response sizes for true and false SQL conditions. "
         "This may indicate boolean-based blind SQL injection. Manual verification is recommended."
     ),
+    "csrf_missing_token": (
+        "A POST form was found with no CSRF token field. Without a token, any website can "
+        "submit this form on behalf of an authenticated user, enabling Cross-Site Request "
+        "Forgery attacks that perform actions without the user's knowledge."
+    ),
+    "csrf_origin": (
+        "The server accepted a POST request with a cross-origin Origin header without "
+        "rejecting it. This may allow cross-site form submissions from attacker-controlled pages."
+    ),
+    "method_tamper": (
+        "The endpoint accepted a non-standard HTTP method (PUT/DELETE/PATCH). "
+        "This may allow unauthorized data modification or deletion if access controls "
+        "are only enforced on GET and POST methods."
+    ),
+    "method_tamper_options": (
+        "The OPTIONS response advertises dangerous HTTP methods (PUT/DELETE/PATCH/TRACE). "
+        "If these methods are functional, they may allow unauthorized data manipulation."
+    ),
+    "xxe": (
+        "An XML External Entity payload was reflected in the response, indicating the XML "
+        "parser processes external entities. This allows attackers to read local files, "
+        "perform SSRF, or cause denial of service."
+    ),
+    "ssrf": (
+        "The server made a request to an internal address supplied via a parameter. "
+        "SSRF allows attackers to probe internal services, access cloud metadata endpoints "
+        "(AWS/GCP/Azure), and potentially pivot to internal infrastructure."
+    ),
+    "path_traversal": (
+        "The application returned contents of a system file when a path traversal sequence "
+        "was injected. This allows attackers to read arbitrary files on the server including "
+        "configuration files, credentials, and source code."
+    ),
+    "cmd_injection": (
+        "Command output appeared in the response after injecting OS command separators. "
+        "This is a critical vulnerability allowing full remote code execution on the server."
+    ),
+    "jwt_alg_none": (
+        "The JWT uses 'alg: none', meaning the signature is not verified. An attacker can "
+        "forge any token by setting alg to none and removing the signature, gaining "
+        "unauthorized access to any account."
+    ),
+    "jwt_weak_secret": (
+        "The JWT HS256 secret was cracked using a common password. An attacker can forge "
+        "valid tokens for any user, including admin accounts."
+    ),
+    "jwt_no_exp": (
+        "The JWT has no expiry claim. Stolen tokens remain valid indefinitely, giving "
+        "attackers permanent access even after a password change."
+    ),
+    "jwt_sensitive": (
+        "Sensitive data was found in the JWT payload. JWTs are base64-encoded, not encrypted "
+        "— anyone who intercepts the token can read its contents."
+    ),
 }
 
 def get_explanation(category, header=None, code=None):

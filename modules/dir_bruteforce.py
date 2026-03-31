@@ -35,6 +35,9 @@ def bruteforce_dirs(base_url, requester, wordlist=None, threads=10, explain=Fals
         try:
             resp = requester._session.get(url, timeout=8, verify=False, allow_redirects=False)
             if resp.status_code in INTERESTING:
+                # Skip SPA catch-all: if it's a 200 but looks like the index HTML, ignore
+                if resp.status_code == 200 and _is_spa_catchall(resp):
+                    return None
                 return url, resp.status_code
         except Exception:
             pass
@@ -68,3 +71,26 @@ def _load_wordlist(path):
         return []
     with open(path) as f:
         return [l.strip() for l in f if l.strip() and not l.startswith("#")]
+
+
+def _is_spa_catchall(resp):
+    """
+    Detect if a 200 response is just the SPA index.html catch-all
+    rather than a real resource. Checks for common SPA shell markers.
+    """
+    ct = resp.headers.get("Content-Type", "")
+    if "text/html" not in ct:
+        return False  # JSON, JS, CSS etc. are real resources
+
+    body = resp.text[:2000].lower()
+    # SPA shells typically have these markers
+    spa_markers = [
+        '<div id="root"',
+        '<div id="app"',
+        'react', 'vue', 'angular',
+        'vite', 'webpack',
+        '/@vite/', '/@react-refresh',
+        'src/main.', 'src/index.',
+    ]
+    matches = sum(1 for m in spa_markers if m in body)
+    return matches >= 2

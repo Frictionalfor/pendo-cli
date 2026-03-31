@@ -30,8 +30,17 @@ from modules.open_redirect import check_open_redirect
 from modules.dir_bruteforce import bruteforce_dirs
 from modules.rate_limit_check import check_rate_limiting
 from modules.blind_sqli import probe_blind_sqli
+from modules.csrf_check import check_csrf
+from modules.method_tamper import check_method_tampering
+from modules.xxe_probe import probe_xxe
+from modules.ssrf_probe import probe_ssrf
+from modules.path_traversal import probe_path_traversal
+from modules.cmd_injection import probe_cmd_injection
+from modules.jwt_check import check_jwt
 from modules.deduplicator import deduplicate
 from modules.rate_limiter import RateLimiter
+from utils.summary import print_summary, build_summary_dict
+from core.fuzzer import run_fuzz
 from reports.report_generator import generate_report
 
 log = get_logger(__name__)
@@ -44,28 +53,30 @@ def _print_help():
     print_banner()
     print(f"""{CYAN}usage:{RESET} pendo [-h] [-v] <command> [options] <url>
 
-{BOLD}Pendo CLI — Web Security Probing & Analysis Tool{RESET}
+{BOLD}Pendo CLI v1.1 — Web Application Security Probing Tool{RESET}
 
 {YELLOW}commands:{RESET}
-  scan   <url>              Full security scan (headers, CORS, SSL, cookies,
-                            open redirects, dir bruteforce, rate limit, behavior)
-  probe  <url>              Payload injection — SQLi, XSS, blind SQLi (threaded)
+  scan   <url>              Full passive + active security scan
+  probe  <url>              Deep payload injection (SQLi, XSS, XXE, SSRF,
+                            path traversal, command injection, blind SQLi)
+  fuzz   <url>              Mutation-based parameter fuzzing (SSTI, type
+                            juggling, boundary values, encoding bypasses)
   reports                   Manage saved scan reports
 
 {YELLOW}positional:{RESET}
   url                       Target URL  (e.g. https://example.com)
 
-{YELLOW}scan / probe options:{RESET}
+{YELLOW}scan / probe / fuzz options:{RESET}
   -h,  --help               Show this help message and exit
   -v,  --version            Show version and exit
        --explain            Show reasoning behind each finding
   -o,  --output FILE        Save report to file  (default: output/scans/)
        --format txt|json    Report format  (default: txt)
-       --threads N          Thread count for bruteforce/probe  (default: 10)
+       --threads N          Thread count  (default: 10)
        --delay SECONDS      Delay between requests  (default: 0.3)
        --cookies COOKIES    Session cookies  e.g. {DIM}'session=abc;token=xyz'{RESET}
        --auth HEADER        Auth header     e.g. {DIM}'Authorization:Bearer TOKEN'{RESET}
-       --silent             Suppress progress — only print findings
+       --silent             Suppress progress — only print findings + summary
        --no-cache           Disable response caching entirely
        --cache-ttl SECS     Cache TTL in seconds  (default: 300)
        --cache-size N       Max cached responses  (default: 256)
@@ -74,40 +85,57 @@ def _print_help():
        --payloads FILE      Payload file or category: sqli / xss / generic
                             (default: data/payloads/generic.txt)
 
-{YELLOW}scan modules:{RESET}
-  headers                   6 security headers checked
-  cors                      CORS misconfiguration (wildcard + reflected origin)
+{YELLOW}fuzz-only options:{RESET}
+       --seed VALUE         Seed value for mutation generation  (default: test)
+
+{YELLOW}scan modules (v1.0):{RESET}
+  headers                   6 security headers
+  cors                      CORS misconfiguration
   ssl                       Certificate expiry, self-signed, TLS 1.0/1.1
   cookies                   HttpOnly, Secure, SameSite flags
   open-redirect             Redirect parameter injection
   dir-bruteforce            Path discovery via wordlist (threaded)
-  rate-limit                Login endpoint brute-force protection check
-  behavior                  Status codes, server disclosure, large responses
+  rate-limit                Login endpoint brute-force protection
+  behavior                  Status codes, server disclosure
 
-{YELLOW}probe modules:{RESET}
+{YELLOW}scan modules (v1.1 new):{RESET}
+  csrf                      Missing CSRF tokens + cross-origin POST acceptance
+  method-tamper             PUT/DELETE/PATCH/TRACE method testing
+  jwt                       alg:none, weak secret, expiry, sensitive payload
+
+{YELLOW}probe modules (v1.0):{RESET}
   sqli                      Error-based SQL injection
   blind-sqli                Time-based + boolean-based blind SQLi
   xss                       Reflected input / XSS patterns
 
+{YELLOW}probe modules (v1.1 new):{RESET}
+  xxe                       XML External Entity injection
+  ssrf                      Server-Side Request Forgery
+  path-traversal            Directory traversal (../etc/passwd)
+  cmd-injection             OS command injection (;id, |whoami)
+
+{YELLOW}fuzz modules (v1.1 new):{RESET}
+  mutations                 Type juggling, boundary values, encoding variants
+  ssti                      Server-Side Template Injection detection
+  error-disclosure          Anomalous status codes and response size deltas
+
 {YELLOW}output:{RESET}
-  confidence                Every finding includes High / Medium / Low confidence
-  deduplication             Duplicate findings merged, confidence upgraded on repeat hits
+  summary                   Severity box printed after every scan
+  confidence                High / Medium / Low per finding
+  deduplication             Duplicate findings merged
 
 {YELLOW}reports options:{RESET}
   reports list              List all saved reports
-  reports open <id>         Print a report to terminal  (id = index or filename)
-  reports delete <id>       Delete a report             (id = index, filename, or 'all')
+  reports open <id>         Print a report to terminal
+  reports delete <id>       Delete a report  (index, filename, or 'all')
 
 {YELLOW}examples:{RESET}
-  {DIM}pendo scan https://example.com{RESET}
   {DIM}pendo scan https://example.com --explain{RESET}
-  {DIM}pendo scan https://example.com --threads 20 --format json{RESET}
-  {DIM}pendo scan https://example.com --cookies 'session=abc' --explain{RESET}
   {DIM}pendo scan https://example.com --auth 'Authorization:Bearer TOKEN'{RESET}
-  {DIM}pendo scan https://example.com --silent -o report --format json{RESET}
   {DIM}pendo probe https://example.com --payloads sqli --threads 20{RESET}
   {DIM}pendo probe https://example.com --payloads xss --explain{RESET}
-  {DIM}pendo probe https://example.com --payloads generic --no-cache{RESET}
+  {DIM}pendo fuzz https://example.com --seed admin --threads 15{RESET}
+  {DIM}pendo fuzz https://example.com --seed 1 --format json -o fuzz_report{RESET}
   {DIM}pendo reports list{RESET}
   {DIM}pendo reports open 1{RESET}
   {DIM}pendo reports delete all{RESET}
@@ -201,11 +229,26 @@ def cmd_scan(args):
         if resp:
             results += analyze_behavior(ep["url"], resp, explain=args.explain)
 
+    if not silent: print_info("Checking CSRF protection...")
+    results += check_csrf(url, requester=req, explain=args.explain)
+
+    if not silent: print_info("Testing HTTP method tampering...")
+    results += check_method_tampering(endpoints, requester=req,
+                                      threads=threads, explain=args.explain)
+
+    # JWT analysis if auth token provided
+    auth_raw = getattr(args, "auth", None)
+    if auth_raw and "bearer" in auth_raw.lower():
+        if not silent: print_info("Analysing JWT token...")
+        token_val = auth_raw.split(":", 1)[1].strip() if ":" in auth_raw else auth_raw
+        results += check_jwt(token_val, explain=args.explain)
+
     # Deduplicate and score
     results = deduplicate(results)
 
     if not silent:
         _print_cache_stats(req)
+        print_summary(results)
 
     generate_report(results, url, output_path=args.output,
                     fmt=args.format, explain=args.explain, silent=silent)
@@ -248,16 +291,67 @@ def cmd_probe(args):
     results += probe_blind_sqli(endpoints, requester=probe_req,
                                 limiter=limiter, explain=args.explain)
 
+    if not silent: print_info("Testing XXE injection...")
+    results += probe_xxe(endpoints, requester=probe_req, explain=args.explain)
+
+    if not silent: print_info("Testing SSRF...")
+    results += probe_ssrf(endpoints, requester=probe_req, explain=args.explain)
+
+    if not silent: print_info("Testing path traversal...")
+    results += probe_path_traversal(endpoints, requester=probe_req, explain=args.explain)
+
+    if not silent: print_info("Testing command injection...")
+    results += probe_cmd_injection(endpoints, requester=probe_req, explain=args.explain)
+
     # Deduplicate and score
     results = deduplicate(results)
 
     if not silent:
         _print_cache_stats(crawl_req)
+        print_summary(results)
 
     generate_report(results, url, output_path=args.output,
                     fmt=args.format, explain=args.explain, silent=silent)
 
-    # Purge every layer of state — cache, sessions, connections, pycache, gc
+    purge_all(store=store, silent=silent)
+
+
+def cmd_fuzz(args):
+    silent = getattr(args, "silent", False)
+    if not silent:
+        print_banner()
+
+    url = validate_url(args.url)
+    if not url:
+        print_error(f"Invalid URL: {args.url}")
+        return
+
+    if not silent:
+        print_info(f"Target   : {url}")
+        print_info(f"Mode     : Fuzz")
+        print_info(f"Seed     : {args.seed}")
+
+    store   = ResponseStore()
+    limiter = RateLimiter(delay=args.delay)
+    req     = _build_requester(args, cache_on=False)
+    threads = getattr(args, "threads", 10)
+
+    if not silent: print_info("Discovering endpoints...")
+    endpoints = crawl(url, limiter=limiter, store=store, requester=req)
+    if not silent: print_info(f"Found {len(endpoints)} endpoint(s)")
+
+    if not silent: print_info("Fuzzing parameters with mutations...")
+    results = run_fuzz(endpoints, requester=req, seed=args.seed,
+                       threads=threads, explain=args.explain)
+
+    results = deduplicate(results)
+
+    if not silent:
+        print_summary(results)
+
+    generate_report(results, url, output_path=args.output,
+                    fmt=args.format, explain=args.explain, silent=silent)
+
     purge_all(store=store, silent=silent)
 
 
@@ -434,6 +528,11 @@ def main():
     add_common(pp)
     pp.add_argument("--payloads", default="data/payloads/generic.txt")
 
+    # ── fuzz ─────────────────────────────────────────────────────────
+    fp = sub.add_parser("fuzz", add_help=False)
+    add_common(fp)
+    fp.add_argument("--seed", default="test", help="Seed value for mutation generation")
+
     # ── reports ──────────────────────────────────────────────────────
     rp = sub.add_parser("reports", add_help=False)
     rp.add_argument("-h", "--help", action=_HelpAction)
@@ -453,6 +552,8 @@ def main():
         cmd_scan(args)
     elif args.command == "probe":
         cmd_probe(args)
+    elif args.command == "fuzz":
+        cmd_fuzz(args)
     elif args.command == "reports":
         cmd_reports(args)
     else:

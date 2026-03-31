@@ -37,6 +37,28 @@ _CONFIDENCE_MAP = {
     "Unauthenticated Endpoint":                  "Medium",
     "Access Forbidden (Possible Sensitive Endpoint)": "Medium",
     "Unusually Large Response":                  "Low",
+    # V1.1
+    "CSRF: Missing Token on POST Form":          "High",
+    "CSRF: Cross-Origin POST Accepted":          "Medium",
+    "HTTP Method Tampering: DELETE Accepted":    "High",
+    "HTTP Method Tampering: PUT Accepted":       "High",
+    "HTTP Method Tampering: PATCH Accepted":     "Medium",
+    "HTTP Method Tampering: Dangerous Methods Allowed": "Medium",
+    "XXE: XML External Entity Injection":        "High",
+    "SSRF: Server-Side Request Forgery":         "High",
+    "Path Traversal":                            "High",
+    "Command Injection":                         "High",
+    "JWT: Algorithm None Vulnerability":         "High",
+    "JWT: Weak Secret":                          "High",
+    "JWT: Missing Expiry (exp) Claim":           "Medium",
+    "JWT: Token Expired":                        "Low",
+    "JWT: Sensitive Data in Payload":            "High",
+    "JWT: Missing 'iss' Claim":                  "Low",
+    "JWT: Missing 'iat' Claim":                  "Low",
+    "Fuzz: Server Error on Mutation":            "Medium",
+    "Fuzz: Anomalous Response Size":             "Low",
+    "Fuzz: Error Disclosure on Mutation":        "Medium",
+    "Fuzz: Possible SSTI (Template Injection)":  "High",
 }
 
 
