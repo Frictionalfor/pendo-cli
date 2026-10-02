@@ -57,7 +57,6 @@ def probe_xxe(endpoints, requester, explain=False):
                         data=payload,
                         headers={"Content-Type": ct},
                         timeout=10,
-                        verify=False,
                         allow_redirects=False,
                     )
                     body = resp.text

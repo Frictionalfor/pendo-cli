@@ -10,9 +10,6 @@ os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
 sys.dont_write_bytecode = True
 
 import argparse
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 from utils.banner import print_banner, CYAN, RESET, DIM, BOLD, GREEN, YELLOW
 from utils.validator import validate_url
 from utils.logger import get_logger
@@ -80,6 +77,7 @@ def _print_help():
        --no-cache           Disable response caching entirely
        --cache-ttl SECS     Cache TTL in seconds  (default: 300)
        --cache-size N       Max cached responses  (default: 256)
+       --insecure           Disable SSL certificate verification
 
 {YELLOW}probe-only options:{RESET}
        --payloads FILE      Payload file or category: sqli / xss / generic
@@ -164,12 +162,17 @@ def _build_requester(args, cache_on=True):
     cookies     = _parse_cookies(getattr(args, "cookies", None))
     auth_header = _parse_auth(getattr(args, "auth", None))
     no_cache    = getattr(args, "no_cache", False)
+    insecure    = getattr(args, "insecure", False)
+    if insecure:
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     return Requester(
         cache_ttl=getattr(args, "cache_ttl", 300),
         cache_size=getattr(args, "cache_size", 256),
         cache_on=(cache_on and not no_cache),
         cookies=cookies,
         auth_header=auth_header,
+        verify=not insecure,
     )
 
 
@@ -518,6 +521,8 @@ def main():
         p.add_argument("--no-cache",   action="store_true", dest="no_cache")
         p.add_argument("--cache-ttl",  type=int, default=300, dest="cache_ttl")
         p.add_argument("--cache-size", type=int, default=256, dest="cache_size")
+        p.add_argument("--insecure",   action="store_true",
+                       help="disable SSL certificate verification")
         # sub-command help also shows banner
         p.add_argument("-h", "--help", action=_HelpAction)
 

@@ -33,7 +33,7 @@ def bruteforce_dirs(base_url, requester, wordlist=None, threads=10, explain=Fals
     def probe(word):
         url = f"{base}/{word.lstrip('/')}"
         try:
-            resp = requester._session.get(url, timeout=8, verify=False, allow_redirects=False)
+            resp = requester._session.get(url, timeout=8, allow_redirects=False)
             if resp.status_code in INTERESTING:
                 # Skip SPA catch-all: if it's a 200 but looks like the index HTML, ignore
                 if resp.status_code == 200 and _is_spa_catchall(resp):

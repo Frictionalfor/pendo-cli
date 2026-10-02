@@ -36,7 +36,7 @@ def check_csrf(url, requester, explain=False):
     issues = []
 
     try:
-        resp = requester._session.get(url, timeout=10, verify=False, allow_redirects=True)
+        resp = requester._session.get(url, timeout=10, allow_redirects=True)
     except Exception as e:
         log.debug(f"CSRF check fetch failed: {e}")
         return issues
@@ -93,7 +93,6 @@ def _test_origin_validation(url, requester, explain):
             data={"test": "csrf_probe"},
             headers={"Origin": "https://evil.attacker.com"},
             timeout=8,
-            verify=False,
             allow_redirects=False,
         )
         # If server accepts cross-origin POST without redirect/403

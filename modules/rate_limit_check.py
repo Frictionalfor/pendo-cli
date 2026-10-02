@@ -25,7 +25,7 @@ def check_rate_limiting(base_url, requester, explain=False):
     for path in LOGIN_PATHS:
         url = base + path
         try:
-            probe = requester._session.get(url, timeout=5, verify=False, allow_redirects=False)
+            probe = requester._session.get(url, timeout=5, allow_redirects=False)
             if probe.status_code == 404:
                 continue
         except Exception:
@@ -39,7 +39,6 @@ def check_rate_limiting(base_url, requester, explain=False):
                     url,
                     data={"username": "test", "password": "test"},
                     timeout=5,
-                    verify=False,
                     allow_redirects=False,
                 )
                 codes.append(r.status_code)

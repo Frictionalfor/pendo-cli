@@ -69,7 +69,7 @@ def probe_cmd_injection(endpoints, requester, explain=False):
 
                 try:
                     resp = requester._session.get(
-                        probe_url, timeout=8, verify=False, allow_redirects=False
+                        probe_url, timeout=8, allow_redirects=False
                     )
                     body = resp.text
 

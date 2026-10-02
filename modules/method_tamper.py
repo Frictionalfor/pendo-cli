@@ -42,7 +42,7 @@ def check_method_tampering(endpoints, requester, threads=10, explain=False):
     def _probe(url, method):
         try:
             resp = requester._session.request(
-                method, url, timeout=8, verify=False, allow_redirects=False
+                method, url, timeout=8, allow_redirects=False
             )
             return url, method, resp.status_code
         except Exception:
@@ -61,7 +61,7 @@ def check_method_tampering(endpoints, requester, threads=10, explain=False):
                 resp_obj = None
                 try:
                     resp_obj = requester._session.options(
-                        url, timeout=8, verify=False, allow_redirects=False
+                        url, timeout=8, allow_redirects=False
                     )
                     allow = resp_obj.headers.get("Allow", "")
                     dangerous_allowed = [

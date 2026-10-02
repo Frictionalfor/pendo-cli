@@ -185,6 +185,7 @@ pendo reports delete all
 | `--no-cache` | Disable response caching |
 | `--cache-ttl SECS` | Cache TTL in seconds (default: 300) |
 | `--cache-size N` | Max cached responses (default: 256) |
+| `--insecure` | Disable SSL certificate verification (not recommended) |
 | `--payloads FILE` | Payload file or category (probe only) |
 | `--seed VALUE` | Seed for mutation generation (fuzz only, default: test) |
 

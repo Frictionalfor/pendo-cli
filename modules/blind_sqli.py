@@ -73,7 +73,7 @@ def _time_test(url, params, param, payload, db_label, req, explain):
     target_url = _inject_url(url, params, param, payload)
     try:
         start = time.monotonic()
-        req._session.get(target_url, timeout=15, verify=False, allow_redirects=False)
+        req._session.get(target_url, timeout=15, allow_redirects=False)
         elapsed = time.monotonic() - start
     except Exception:
         return None
@@ -98,9 +98,9 @@ def _time_test(url, params, param, payload, db_label, req, explain):
 def _bool_test(url, params, param, true_payload, false_payload, req, explain):
     try:
         r_true  = req._session.get(_inject_url(url, params, param, true_payload),
-                                   timeout=10, verify=False, allow_redirects=False)
+                                   timeout=10, allow_redirects=False)
         r_false = req._session.get(_inject_url(url, params, param, false_payload),
-                                   timeout=10, verify=False, allow_redirects=False)
+                                   timeout=10, allow_redirects=False)
     except Exception:
         return None
 

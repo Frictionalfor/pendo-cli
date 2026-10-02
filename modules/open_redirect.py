@@ -48,7 +48,7 @@ def check_open_redirect(endpoints, requester, explain=False):
             try:
                 # Don't follow redirects — we want to inspect the Location header
                 resp = requester._session.get(
-                    new_url, timeout=10, verify=False, allow_redirects=False
+                    new_url, timeout=10, allow_redirects=False
                 )
             except Exception as e:
                 log.debug(f"Open redirect check failed: {e}")

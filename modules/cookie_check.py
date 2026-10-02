@@ -16,7 +16,7 @@ def check_cookies(url, requester, explain=False):
     Returns a list of issue dicts.
     """
     try:
-        resp = requester._session.get(url, timeout=10, verify=False, allow_redirects=True)
+        resp = requester._session.get(url, timeout=10, allow_redirects=True)
     except Exception as e:
         log.debug(f"Cookie check failed: {e}")
         return []

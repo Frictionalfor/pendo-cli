@@ -31,13 +31,15 @@ class Requester:
         cookies=None,
         auth_header=None,
         timeout=10,
+        verify=True,
     ):
         self.timeout = timeout
+        self.verify  = verify
         self.cache   = RequestCache(max_size=cache_size, ttl=cache_ttl, enabled=cache_on)
 
         self._session = requests.Session()
         self._session.headers.update(_DEFAULT_HEADERS)
-        self._session.verify = False
+        self._session.verify = verify
 
         if cookies:
             self._session.cookies.update(cookies)
@@ -223,7 +225,7 @@ def purge_all(store=None, silent=False):
 
         self._session = requests.Session()
         self._session.headers.update(_DEFAULT_HEADERS)
-        self._session.verify = False
+        self._session.verify = verify
 
         if cookies:
             self._session.cookies.update(cookies)
