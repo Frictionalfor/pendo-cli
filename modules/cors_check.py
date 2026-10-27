@@ -23,7 +23,7 @@ def check_cors(url, explain=False, requester=None):
     try:
         # Must be a raw session call with custom Origin header — bypass all cache
         resp = req._session.get(
-            url, headers={"Origin": EVIL_ORIGIN}, timeout=10, verify=False
+            url, headers={"Origin": EVIL_ORIGIN}, timeout=10
         )
     except Exception as e:
         log.warning(f"CORS check failed: {e}")

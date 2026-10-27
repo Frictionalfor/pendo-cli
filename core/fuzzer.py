@@ -139,7 +139,7 @@ def run_fuzz(endpoints, requester, seed="test", threads=10, explain=False):
 def _get_baseline(ep, req):
     """Fetch the clean response for comparison."""
     try:
-        resp = req._session.get(ep["url"], timeout=8, verify=False, allow_redirects=False)
+        resp = req._session.get(ep["url"], timeout=8, allow_redirects=False)
         return {"status": resp.status_code, "length": len(resp.content), "body": resp.text}
     except Exception:
         return {"status": 200, "length": 0, "body": ""}
@@ -153,7 +153,7 @@ def _fuzz_one(ep, param, mutation, baseline, req, explain):
     probe_url = urlunparse(parsed._replace(query=urlencode(injected)))
 
     try:
-        resp = req._session.get(probe_url, timeout=8, verify=False, allow_redirects=False)
+        resp = req._session.get(probe_url, timeout=8, allow_redirects=False)
     except Exception:
         return None
 
